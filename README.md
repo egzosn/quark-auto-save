@@ -100,6 +100,12 @@ docker run -d \
 
 ```
 
+### 直接使用
+
+在项目目录下打开命令行工具，如win的`cmd`
+```
+python quark_auto_save.py
+```
 
 ### 正则整理示例
 
