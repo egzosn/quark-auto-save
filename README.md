@@ -40,7 +40,7 @@ docker run -d \
   -v /yourpath/quark-auto-save/config:/app/config \
   --network bridge \
   --restart unless-stopped \
-  ghcr.io/cp0204/quark-auto-save:latest
+  ghcr.io/egzosn/quark-auto-save:main
 ```
 
 默认管理账号 `admin` ，密码 `admin123`，仅支持在 `quark_config.json` 中修改。
@@ -54,7 +54,7 @@ docker run -d \
 1. 拉库命令：
 
     ```
-    ql repo https://github.com/Cp0204/quark-auto-save.git "quark" "" "sendNotify"
+    ql repo https://github.com/egzosn/quark-auto-save.git "quark" "" "sendNotify"
     ```
 
 2. 首次运行程序将从本仓库下载配置模版。
