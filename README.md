@@ -86,7 +86,7 @@ docker run -d \
  "crontab": "0 */5 * * *"
 }
 ```
-每次运行脚本将从本仓库下载最新 `quark_config_tasklist.json` 的网盘资源：
+每次运行脚本将从本仓库下载最新 `quark_config_tasklist.json` 的网盘资源列表配置：
 ```json
 [
     {
