@@ -726,9 +726,9 @@ def main():
         with open(config_path, "r", encoding="utf-8") as file:
             config_data = json.load(file)
     print(f"下载任务列表文件 {tasklist_path} ，正远程从下载任务列表文件")
-    # tasklist_url = "https://mirror.ghproxy.com/https://raw.githubusercontent.com/egzosn/quark-auto-save/main/quark_config_tasklist.json"
-    # if download_file(tasklist_url, tasklist_path):
-    #     print("✅ 任务列表文件下载成功")
+    tasklist_url = "https://mirror.ghproxy.com/https://raw.githubusercontent.com/egzosn/quark-auto-save/main/quark_config_tasklist.json"
+    if download_file(tasklist_url, tasklist_path):
+        print("✅ 任务列表文件下载成功")
     with open(tasklist_path, "r", encoding="utf-8") as file:
         tasklist_data = json.load(file)
     # 获取cookie
