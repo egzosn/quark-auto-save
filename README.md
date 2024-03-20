@@ -102,7 +102,10 @@ docker run -d \
 
 ### 直接使用
 
-在项目目录下打开命令行工具，如win的`cmd`
+1. **前置条件安装python**
+
+2. 在项目目录下打开命令行工具，如win的`cmd`
+
 ```
 python quark_auto_save.py
 ```
