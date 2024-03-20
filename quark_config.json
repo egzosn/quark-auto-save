@@ -1,6 +1,6 @@
 {
   "cookie": [
-    "_UP_A4A_11_=wb963172c5194d2ea122a2b6a47ecccc; _UP_30C_6A_=st9636201bcltfz9ymdnj81h3ea5al9h; _UP_TS_=sg18d833ff2d8cc4b65412a4b76c55d58cf; _UP_E37_B7_=sg18d833ff2d8cc4b65412a4b76c55d58cf; _UP_TG_=st9636201bcltfz9ymdnj81h3ea5al9h; _UP_335_2B_=1; __pus=2b8896ca1881bccbd9f32f2121e1e533AAQZGy6PPRiLlb3S2NsbA3CTg0yRlzZJbgisZqU7lDF0MZhcB2YRSpGM9ZBHLWnoIR46BZomgM+GTRDJgQNqL7fe; __kp=a6187490-da30-11ee-bf19-47ff36f953c4; __kps=AATMdp9xQ88fl1UGXcHZhM+W; __ktd=Lmh4Qng7/MoiJ7iQ4BfGfA==; __uid=AATMdp9xQ88fl1UGXcHZhM+W; __puus=fc8bb294bcb040ec6747228758b406d4AAQknlioNcjVlKdSkSgmDOiqJG2S8bnUSLfCnaAU+CqUjNt4s0UfOts9dlswEDzW88v4L1J+sa3BvCPA/0nDxyY9uNcIUfWTSZ/JNbUEjrKS4tsDqWKRFUoHP/9v3y2hnvIYPIwmemQRC3rVOwifqDnlWEMAImqwibjlsb/DIcZ3CSOfX9pp2HtV5tY1ahl6tzcHJEW1g7KwrfTbUsbxHWkO"
+    "Your pan.quark.cn Cookie1, Only this one will do save task."
   ],
   "webui": {
     "username": "sunjackson",
@@ -14,5 +14,6 @@
     "url": "",
     "apikey": ""
   },
+  "tasklist": [],
   "crontab": "0 */5 * * *"
 }

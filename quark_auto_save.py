@@ -129,6 +129,61 @@ def get_account_info(cookie):
         return False
 
 
+def get_detail_new(pwd_id, stoken, pdir_fid, page=1, file_list=None):
+    if file_list is None:
+        file_list = []
+
+    url = "https://pan.quark.cn/1/clouddrive/share/sharepage/detail"
+    querystring = {
+        "pr": "ucpro",
+        "fr": "pc",
+        "pwd_id": pwd_id,
+        "stoken": stoken,
+        "pdir_fid": pdir_fid,
+        "force": "0",
+        "_page": page,
+        "_size": "50",
+        "_fetch_banner": "0",
+        "_fetch_share": "0",
+        "_fetch_total": "1",
+        "_sort": "file_type:asc,updated_at:desc",
+    }
+    headers = common_headers()
+    response = requests.request(
+        "GET", url, headers=headers, params=querystring
+    ).json()
+
+    if response["data"]:
+        if response["data"]["list"]:
+            for file in response["data"]["list"]:
+                file_list.append(file)
+                if file['file_type'] == 0:  # 如果是文件夹，递归扫描
+                    file_list += get_detail_new(pwd_id, stoken, file['fid'])
+
+            if len(file_list) >= response["metadata"]["_total"]:
+                return file_list
+            else:
+                return get_detail_new(pwd_id, stoken, pdir_fid, page+1, file_list)
+        else:
+            return file_list
+    else:
+        return file_list
+
+
+def get_share_password(share_id):
+    url = "https://drive-pc.quark.cn/1/clouddrive/share/password"
+    querystring = {"pr": "ucpro", "fr": "pc", "uc_param_str": ""}
+    payload = {"share_id": share_id}
+    headers = common_headers()
+    response = requests.request(
+        "POST", url, json=payload, headers=headers, params=querystring
+    ).json()
+    if response.get("data"):
+        return True, response["data"]
+    else:
+        return False, response["message"]
+
+
 # 可验证资源是否失效
 def get_stoken(pwd_id):
     url = "https://pan.quark.cn/1/clouddrive/share/sharepage/token"
@@ -146,7 +201,7 @@ def get_stoken(pwd_id):
 
 def get_detail(pwd_id, stoken, pdir_fid):
     file_list = []
-    page = 1
+    page=1
     while True:
         url = "https://pan.quark.cn/1/clouddrive/share/sharepage/detail"
         querystring = {
@@ -167,6 +222,7 @@ def get_detail(pwd_id, stoken, pdir_fid):
         response = requests.request(
             "GET", url, headers=headers, params=querystring
         ).json()
+        # print(pwd_id, stoken, pdir_fid, page, response["data"]["list"])
         if response["data"]["list"]:
             file_list += response["data"]["list"]
             page += 1
@@ -180,6 +236,7 @@ def get_detail(pwd_id, stoken, pdir_fid):
 def get_fids(file_paths):
     url = "https://drive.quark.cn/1/clouddrive/file/info/path_list"
     querystring = {"pr": "ucpro", "fr": "pc"}
+    #print(file_paths)
     payload = {"file_path": file_paths, "namespace": "0"}
     headers = common_headers()
     response = requests.request(
@@ -244,6 +301,30 @@ def save_file(fid_list, fid_token_list, to_pdir_fid, pwd_id, stoken):
     return response["data"]["task_id"]
 
 
+
+def new_share_file(fid_list, title):
+    url = "https://drive-pc.quark.cn/1/clouddrive/share"
+    querystring = {
+        "pr": "ucpro",
+        "fr": "pc",
+        "uc_param_str": "",
+        "__dt": int(random.uniform(1, 5) * 60 * 1000),
+        "__t": datetime.now().timestamp(),
+    }
+    payload = {
+        "fid_list": fid_list,
+        "title": title,
+        "url_type": 1,
+        "expired_type":4
+    }
+    headers = common_headers()
+    response = requests.request(
+        "POST", url, json=payload, headers=headers, params=querystring
+    ).json()
+    # print(response)
+    return response["data"]["task_id"]
+
+
 def mkdir(dir_path):
     url = "https://drive-pc.quark.cn/1/clouddrive/file"
     querystring = {"pr": "ucpro", "fr": "pc", "uc_param_str": ""}
@@ -273,7 +354,7 @@ def rename(fid, file_name):
 
 def update_savepath_fid(tasklist):
     dir_paths = [
-        item["savepath"]
+        os.path.join(item['savepath'], item['taskname'])
         for item in tasklist
         if not item.get("enddate")
         or (
@@ -281,6 +362,7 @@ def update_savepath_fid(tasklist):
             <= datetime.strptime(item["enddate"], "%Y-%m-%d").date()
         )
     ]
+
     if not dir_paths:
         return False
     dir_paths_exist_arr = get_fids(dir_paths)
@@ -288,13 +370,13 @@ def update_savepath_fid(tasklist):
     # 比较创建不存在的
     dir_paths_unexist = list(set(dir_paths) - set(dir_paths_exist))
     for dir_path in dir_paths_unexist:
-        new_dir = mkdir(dir_path)
-        dir_paths_exist_arr.append({"file_path": dir_path, "fid": new_dir["fid"]})
-        print("创建文件夹: ", dir_path)
+        new_dir = mkdir(dir_path.replace('\\', '/'))
+        dir_paths_exist_arr.append({"file_path": dir_path.replace('\\', '/'), "fid": new_dir["fid"]})
+        print("创建文件夹: ", dir_path.replace('\\', '/'))
     # 更新到配置
     for task in tasklist:
         for dir_path in dir_paths_exist_arr:
-            if task["savepath"] == dir_path["file_path"]:
+            if os.path.join(task['savepath'], task['taskname']).replace('\\', '/') == dir_path["file_path"]:
                 task["savepath_fid"] = dir_path["fid"]
     # print(dir_paths_exist_arr)
 
@@ -307,7 +389,7 @@ def do_save_task(task):
 
     # 链接转换所需参数
     pwd_id, pdir_fid = get_id_from_url(task["shareurl"])
-    # print("match: ", pwd_id, pdir_fid)
+    # print("链接转换所需参数 match: ", pwd_id, pdir_fid)
 
     # 获取stoken，同时可验证资源是否失效
     is_sharing, stoken = get_stoken(pwd_id)
@@ -318,17 +400,17 @@ def do_save_task(task):
     # print("stoken: ", stoken)
 
     # 获取分享文件列表
-    share_file_list = get_detail(pwd_id, stoken, pdir_fid)
+    share_file_list = get_detail_new(pwd_id, stoken, pdir_fid)
     if not share_file_list:
         add_notify(f"《{task['taskname']}》：分享目录为空")
         return
     # print("share_file_list: ", share_file_list)
-
+    
     # 获取目标目录文件列表
     task["savepath_fid"] = (
         task.get("savepath_fid")
         if task.get("savepath_fid")
-        else get_fids([task["savepath"]])[0]["fid"]
+        else get_fids([os.path.join(task['savepath'], task['taskname']).replace('\\', '/')])[0]["fid"]
     )
     to_pdir_fid = task["savepath_fid"]
     dir_file_list = ls_dir(to_pdir_fid)
@@ -340,6 +422,7 @@ def do_save_task(task):
     for share_file in share_file_list:
         # 正则文件名匹配
         pattern, replace = magic_regex_func(task["pattern"], task["replace"])
+        # print(share_file["file_name"], pattern, replace)
         if re.search(pattern, share_file["file_name"]):
             # 替换后的文件名
             save_name = (
@@ -372,6 +455,7 @@ def do_save_task(task):
         if save_task_return["code"] == 0:
             save_name_list.sort()
             add_notify(f"《{task['taskname']}》添加追更：{', '.join(save_name_list)}")
+            
             return True
         else:
             add_notify(f"《{task['taskname']}》转存失败：{save_task_return['message']}")
@@ -538,49 +622,85 @@ def do_sign(cookies):
     return first_account
 
 
+def list_split(input_list, n):
+    for x in range(0, len(input_list), n):
+        every_chunk = input_list[x: n+x]
+
+        if len(every_chunk) < n:
+            every_chunk = every_chunk + \
+                [None for y in range(n-len(every_chunk))]
+        yield every_chunk
+
+def save_local_files(name,content, mode='a+'):
+    with open(name, mode) as wf:
+        wf.write(content)
+
 def do_save():
     print(f"===============转存任务===============")
     print(f"转存账号: {first_account['nickname']}")
     # 任务列表
-    tasklist = config_data.get("tasklist", [])
-    # 获取全部保存目录fid
-    update_savepath_fid(tasklist)
-    # 执行任务
-    for index, task in enumerate(tasklist):
-        # 判断任务期限
-        if not task.get("enddate") or (
-            datetime.now().date()
-            <= datetime.strptime(task["enddate"], "%Y-%m-%d").date()
-        ):
-            print(f"")
-            print(f"#{index+1}------------------")
-            print(f"任务名称: {task['taskname']}")
-            print(f"分享链接: {task['shareurl']}")
-            print(f"目标目录: {task['savepath']}")
-            print(f"正则匹配: {task['pattern']}")
-            print(f"正则替换: {task['replace']}")
-            if task.get("enddate"):
-                print(f"任务截止: {task['enddate']}")
-            if task.get("emby_id"):
-                print(f"刷媒体库: {task['emby_id']}")
-            if task.get("ignore_extension"):
-                print(f"忽略后缀: {task['ignore_extension']}")
-            print()
-            is_new = do_save_task(task)
-            is_rename = do_rename_task(task)
-            if (is_new or is_rename) and task.get("emby_id") != "0":
+    _tasklist = tasklist_data
+    
+    for tasklist in list_split(_tasklist, 10):
+        # 获取全部保存目录fid
+        update_savepath_fid(tasklist)
+        # 执行任务
+        for index, task in enumerate(tasklist):
+            # 判断任务期限
+            if not task.get("enddate") or (
+                datetime.now().date()
+                <= datetime.strptime(task["enddate"], "%Y-%m-%d").date()
+            ):
+                print(f"")
+                print(f"#{index+1}------------------")
+                print(f"任务名称: {task['taskname']}")
+                print(f"分享链接: {task['shareurl']}")
+                print("目标目录: ",os.path.join(task['savepath'], task['taskname']).replace('\\', '/'))
+                
+                # print(f"正则匹配: {task['pattern']}")
+                # print(f"正则替换: {task['replace']}")
+                if task.get("enddate"):
+                    print(f"任务截止: {task['enddate']}")
                 if task.get("emby_id"):
-                    emby_refresh(task["emby_id"])
-                else:
-                    match_emby_id = emby_search(task["taskname"])
-                    if match_emby_id:
-                        task["emby_id"] = match_emby_id
-                        emby_refresh(match_emby_id)
-    print(f"")
+                    print(f"刷媒体库: {task['emby_id']}")
+                if task.get("ignore_extension"):
+                    print(f"忽略后缀: {task['ignore_extension']}")
+    
+                is_new = do_save_task(task)
+                # is_rename = do_rename_task(task)
+                is_rename = False
+                fids = ''
+                tpath= os.path.join(task['savepath'], task['taskname']).replace('\\', '/')
+                if (is_new or is_rename) and task.get("emby_id") != "0":
+                    fids = get_fids([tpath])[0]["fid"]
+                if(''== fids):
+                    print(f"❌ 目标目录存在或未找到文件: {tpath}，请确认文件名，暂时跳过处理")
+                    continue
+                print(f"目标目录fid: {fids}")
+                share_task_id = new_share_file([fids], task["taskname"])
+                
+                import time
+                while True:
+                    time.sleep(1)
+                    share_task_return = query_task(share_task_id)
+                    if share_task_return.get("data", {}).get("share_id", None):
+                        break
+                share_status, share_info = get_share_password(share_task_return.get("data", {}).get("share_id", None))
+                if share_status:
+                    print(f"分享任务链接: {share_info.get('share_url', None)}")
+                    save_local_files("1.txt", task["taskname"]+"\t"+share_info.get('share_url', None)+"\n")
+                    if task.get("emby_id"):
+                        emby_refresh(task["emby_id"])
+                    else:
+                        match_emby_id = emby_search(task["taskname"])
+                        if match_emby_id:
+                            task["emby_id"] = match_emby_id
+                            emby_refresh(match_emby_id)
+        print(f"")
 
 
 def main():
-    global config_data, first_account
+    global config_data, tasklist_data, first_account
     formatted_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print(f"===============程序开始===============")
     print(f"⏰ 执行时间: {formatted_time}")
@@ -591,16 +711,26 @@ def main():
         config_path = arguments[1]
     else:
         config_path = "quark_config.json"
+    if len(arguments) > 2:
+        tasklist_path = arguments[2]
+    else:
+        tasklist_path = "quark_config_tasklist.json"
     # 检查本地文件是否存在，如果不存在就下载
     if not os.path.exists(config_path):
         print(f"❌ 配置文件 {config_path} 不存在，正远程从下载配置模版")
-        config_url = "https://mirror.ghproxy.com/https://raw.githubusercontent.com/Cp0204/quark_auto_save/main/quark_config.json"
+        config_url = "https://mirror.ghproxy.com/https://raw.githubusercontent.com/egzosn/quark-auto-save/main/quark_config.json"
         if download_file(config_url, config_path):
             print("✅ 配置模版下载成功，请到程序目录中手动配置")
         return
     else:
         with open(config_path, "r", encoding="utf-8") as file:
             config_data = json.load(file)
+    print(f"下载任务列表文件 {tasklist_path} ，正远程从下载任务列表文件")
+    # tasklist_url = "https://mirror.ghproxy.com/https://raw.githubusercontent.com/egzosn/quark-auto-save/main/quark_config_tasklist.json"
+    # if download_file(tasklist_url, tasklist_path):
+    #     print("✅ 任务列表文件下载成功")
+    with open(tasklist_path, "r", encoding="utf-8") as file:
+        tasklist_data = json.load(file)
     # 获取cookie
     cookies = get_cookies()
     if not cookies:
@@ -615,8 +745,8 @@ def main():
     if notifys:
         notify_body = "\n".join(notifys)
         print(f"===============推送通知===============")
-        send_ql_notify("【夸克自动追更】", notify_body)
-        print(f"")
+        # send_ql_notify("【夸克自动追更】", notify_body)
+        print(f"【夸克自动追更】\n{notify_body}")
     # 更新配置
     with open(config_path, "w", encoding="utf-8") as file:
         json.dump(config_data, file, ensure_ascii=False, indent=2)
