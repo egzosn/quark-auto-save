@@ -688,7 +688,7 @@ def do_save():
                 share_status, share_info = get_share_password(share_task_return.get("data", {}).get("share_id", None))
                 if share_status:
                     print(f"分享任务链接: {share_info.get('share_url', None)}")
-                    save_local_files("1.txt", task["taskname"]+"\t"+share_info.get('share_url', None)+"\n")
+                    save_local_files("短剧分享.txt", task["taskname"]+"\t"+share_info.get('share_url', None)+"\n")
                     if task.get("emby_id"):
                         emby_refresh(task["emby_id"])
                     else:
