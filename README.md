@@ -82,23 +82,24 @@ docker run -d \
     "url": "http://yourdomain.com:8096",
     "apikey": "" // 在后台 高级-API秘钥 中生成
   },
-  "tasklist": [ // 无任务则只签到
-    {
-      "taskname": "鸣xx年",
-      "shareurl": "https://pan.quark.cn/s/39xxxx35#/list/share/17xxxx72-鸣xx年",
-      "savepath": "/video/tv/鸣xx年/S01",
-      "pattern": "^广告内容(\\d+).(mp4|mkv)",
-      "replace": "\\1.\\2",
-      "enddate": "2024-01-30",  //可选
-      "emby_id": "",            //可选，缺省时根据taskname搜索匹配，为0时强制不匹配
-      "ignore_extension": true, //可选
-      // 以下字段无需手动配置
-      "savepath_fid": "0833xxxx712d7", // 程序运行获得的保存目录id
-      "shareurl_ban": "分享地址已失效" // 记录分享是否失效；更新链接后请手动删去，如有此字段将跳过任务
-    }
-  ]
+ "tasklist": [],
+ "crontab": "0 */5 * * *"
 }
 ```
+每次运行脚本将从本仓库下载最新 `quark_config_tasklist.json` 的网盘资源：
+```json
+[
+    {
+      "savepath": "/千部网剧",
+      "pattern": "$TV",
+      "replace": "",
+      "taskname": "原来我有五个超级大佬舅舅（80集）",
+      "shareurl": "https://pan.quark.cn/s/2e4362afc225"
+    }
+]
+
+```
+
 
 ### 正则整理示例
 
